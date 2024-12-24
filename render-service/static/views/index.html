@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="Expires" content="-1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/styles/index.css">
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <title>Watch Party</title>
+</head>
+<body>
+    <aside>
+        <div class="d-flex flex-column flex-shrink-0" style="width:75px; height: 100vh;">
+            <ul class="side-menu nav nav-pills nav-flush flex-shrink-0 flex-column mb-auto text-center">
+                <li class="side-item nav-item">
+                    <div class="p-3 border-bottom brand-item">
+                        <i class="fa-solid fa-eye"></i>
+                    </div>
+                </li>
+                <li class="side-item nav-item">
+                    <div class="p-3">
+                        <i class="fa-solid fa-user-group icon" style="font-size: 1.1rem;"></i>
+                    </div>
+                </li>
+                <li class="side-item nav-item">
+                    <div class="p-3">
+                        <i class="fa-solid fa-comment icon"></i>
+                    </div>
+                </li>
+                <li class="side-item nav-item">
+                    <div class="p-3">
+                        <i class="fa-solid fa-bell icon" style="font-size: 1.3rem;"></i>
+                    </div>
+                </li>
+                <li class="flex-placeholder"></li>
+                <li class="side-item nav-item">
+                    <div class="p-3">
+                        <i class="fa-solid fa-bookmark icon"></i>
+                    </div>
+                </li>
+            </ul>
+            <div>
+                <div class="border-top text-center mx-auto p-3" style="width:75%;">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <main>
+        <div class="player-container">
+            <div id="movie-grid">
+            </div>
+            <div class="media-container d-none">
+                <div style="height: 100%; width: 100%; box-sizing: content-box; display: inline-flex;flex-direction: column;justify-content: center;">
+                    <video id="media-player" class="video-js">
+                    </video>
+                </div>
+            </div>
+            <ul class="player-menu">
+                <li id="movie-title">Movie title</li>
+                <li class="flex-placeholder"></li>
+                <li id="request-pause" class="btn btn-primary">
+                    <div>Request pause</div>
+                </li>
+                <li id="expand">
+                    <i class="fa-solid fa-expand"></i>
+                </li>
+            </ul>
+        </div>
+        <div class="chat-box">
+            <div class="header">
+                <div class="desc">
+                    <div class="media-box-desc">
+                        <div id="media-box-name">Watch party</div>
+                        <div id="box-id">#0</div>
+                    </div>
+                    <div class="media-participant-count">
+                        <i class="fa-solid fa-user"></i>
+                        <div id="participant-value">1</div>
+                    </div>
+                </div>
+                <div id="leave">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+                <div id="power-off" class="d-none">
+                    <i class="fa-solid fa-power-off"></i>
+                </div>
+            </div>
+            <ul class="tabcontainer">
+                <li id="message-tab-content" name="message-tab" class="tab-content">
+                    <div>
+                        <ul id="message-box" class="tab-list">
+                        </ul>
+                        <div class="message-input">
+                            <input id="input-text" name="input-text" autocomplete="off">
+                            <i class="fa-solid fa-turn-up" id="sent-message" type="submit"></i>
+                        </div>
+                    </div>
+                </li>
+                <li id="member-tab-content" name="member-tab" class="tab-content active">
+                    <div>
+                        <ul id="member-box" class="auth tab-list">
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+            <ul class="tabs">
+                <li data-name="message-tab" class="tab">
+                    <i class="fa-solid fa-comment"></i>
+                </li>
+                <li data-name="member-tab" class="tab active">
+                    <i class="fa-solid fa-user-group"></i>
+                </li>
+            </ul>
+        </div>
+    </main>
+
+    <script src="https://kit.fontawesome.com/79a53aa110.js" crossorigin="anonymous"></script>
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <script src="/scripts/index.js"></script>
+</body>
+</html>

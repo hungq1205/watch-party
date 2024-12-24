@@ -1,0 +1,86 @@
+html, body {
+  height: 100%;
+  background: rgb(43 48 53);
+  display: inline-flex;
+  justify-content: center;
+}
+
+main {
+    vertical-align: middle;
+    color: rgb(225 225 225);
+    width: 280px;
+}
+
+main > form {
+    margin-bottom: 100px;
+}
+
+.logo {
+    text-align: center;
+    font-size: 80px;
+    color: rgb(225 225 225);
+    caret-color: transparent;
+}
+
+#operation-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: bolder;
+    margin-bottom: 20px;
+    caret-color: transparent;
+    cursor: default;
+}
+
+.form-signin {
+  max-width: 330px;
+  padding: 1rem;
+}
+
+.form-signin .form-floating:focus-within {
+  z-index: 2;
+  color: rgb(225 225 225);
+}
+
+.form-control, .form-control:focus {
+    margin-bottom: -1px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    background: #212529;
+    height: 10px;
+}
+
+.form-floating {
+    margin-bottom: 12px;
+}
+
+.form-floating > input,
+.form-floating > input:focus {
+    border-radius: 6px;
+    color: rgb(225 225 225);
+}
+
+.form-floating > label::after { 
+    background-color: transparent !important;
+}
+
+.form-floating > label {
+    color: rgb(225 225 225) !important;
+}
+
+#password::-ms-reveal {
+  filter: invert(100%);
+}
+
+button {
+    margin-top: 12px;
+}
+
+#alter-option {
+    text-align: end;
+    font-size: 15px;
+    margin-top: 10px;
+    margin-right: 12px;
+    font-weight: normal;
+    cursor: pointer;
+    caret-color: transparent;
+}
