@@ -23,7 +23,6 @@ const (
 	movieServiceAddr   = "http://localhost:3003"
 
 	CONN_TIMEOUT = 33
-	TRACK_GAP    = 11
 )
 
 var (
@@ -259,14 +258,14 @@ func MessageHandler(c echo.Context) error {
 
 func TrackSocket(userId int) {
 	for {
-		time.Sleep(time.Duration(TRACK_GAP) * time.Second)
+		time.Sleep(time.Duration(11) * time.Second)
 		client, ok := internal.GetClient(userId)
 		if !ok {
 			continue
 		}
 
 		client.Mu.Lock()
-		client.ElapsedSec += TRACK_GAP
+		client.ElapsedSec += 11
 		elapsed := client.ElapsedSec
 		displayName := client.DisplayName
 		client.Mu.Unlock()
