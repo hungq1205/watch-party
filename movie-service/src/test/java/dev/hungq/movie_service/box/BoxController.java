@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,19 +16,24 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+import dev.hungq.movie_service.movie.MovieService;
 
 @RestController
 @RequestMapping("/api/box")
 public class BoxController {
-	
+
 	private final BoxService boxService; 
+	private final MovieService movieService; 
 	
-	public BoxController(BoxService boxService)
+	public BoxController(BoxService boxService, MovieService movieService)
 	{
 		this.boxService = boxService;
+		this.movieService = movieService;
 	}
 	
-	@GetMapping("/all")
+	@GetMapping("")
 	ResponseEntity<List<Box>> getBoxes() 
 	{
         return new ResponseEntity<List<Box>>(boxService.findAll(), HttpStatus.OK);
@@ -38,8 +44,8 @@ public class BoxController {
 	{
 		var b = boxService.find(id);
 		if (b.isEmpty())
-			return new ResponseEntity<Box>(HttpStatus.NOT_FOUND);
-        return new ResponseEntity<Box>(boxService.save(b.get()), HttpStatus.OK);
+			return ResponseEntity.notFound().build();
+	    return ResponseEntity.ok(b.get());
 	}
 
 	@GetMapping("/owner/{id}")
@@ -47,8 +53,8 @@ public class BoxController {
 	{
 		var b = boxService.findByOwnerId(id);
 		if (b.isEmpty())
-			return new ResponseEntity<Box>(HttpStatus.NOT_FOUND);
-        return new ResponseEntity<Box>(boxService.save(b.get()), HttpStatus.OK);
+			return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(b.get());
 	}
 
 	@GetMapping("/user/{id}")
@@ -56,23 +62,23 @@ public class BoxController {
 	{
 		var b = boxService.findByUserId(id);
 		if (b.isEmpty())
-			return new ResponseEntity<Box>(HttpStatus.NOT_FOUND);
-        return new ResponseEntity<Box>(b.get(), HttpStatus.OK);
+			return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(b.get());
 	}
 
 	@GetMapping("/{boxId}/exists/{userId}")
-	ResponseEntity<Map<String, Boolean>> getBoxOfUser(@PathVariable int boxId, @PathVariable int userId)
+	ResponseEntity<Map<String, Boolean>> existsUser(@PathVariable int boxId, @PathVariable int userId)
 	{
 		var b = boxService.containsUser(boxId, userId);
 	    Map<String, Boolean> response = new HashMap<>();
 	    response.put("value", b);
-	    return new ResponseEntity<>(response, HttpStatus.OK);
+	    return ResponseEntity.ok(response);
 	}
 	
-	@PostMapping("")
+	@PostMapping(""	)
 	ResponseEntity<Box> createBox(@RequestBody Box box)
 	{
-        return new ResponseEntity<Box>(boxService.create(box), HttpStatus.OK);
+        return ResponseEntity.ok(boxService.create(box));
 	}
 
 	@PutMapping("/{id}")
@@ -85,31 +91,56 @@ public class BoxController {
 		var b = obox.get();
 		b.setOwnerId(box.getOwnerId());
 		b.setElapsed(box.getElapsed());
-		b.setMovieUrl(box.getMovieUrl());
+		b.setMovie(box.getMovie());
 		b.setPassword(box.getPassword());
 		
-        return new ResponseEntity<Box>(boxService.save(b), HttpStatus.OK);
+        return ResponseEntity.ok(boxService.save(b));
+	}
+	
+	@PatchMapping("/{id}/movie")
+	ResponseEntity<Box> updateMovieInBox(@PathVariable int id, @RequestBody Map<String, Integer> movieUpdate) {
+	    var obox = boxService.find(id);
+
+	    if (obox.isEmpty()) {
+	        return ResponseEntity.notFound().build();
+	    }
+
+	    var box = obox.get();
+
+	    Integer movieId = movieUpdate.get("movie_id");
+	    if (movieId == null || movieId < 0) {
+		    box.setMovie(null);
+		    box.setElapsed(movieUpdate.get("elapsed").floatValue());
+		    return ResponseEntity.ok(boxService.save(box));
+	    }
+	    var movie = movieService.find(movieId)
+	    		.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Movie not found"));
+	    
+	    box.setMovie(movie);
+	    box.setElapsed(movieUpdate.get("elapsed").floatValue());
+
+	    return ResponseEntity.ok(boxService.save(box));
 	}
 
 	@DeleteMapping("/{id}")
 	ResponseEntity<String> deleteBox(@PathVariable int id)
 	{
 		boxService.delete(id);
-		return new ResponseEntity<String>("Box " + id + " deleted", HttpStatus.OK);
+		return ResponseEntity.ok("Box " + id + " deleted");
 	}
 	
 	@DeleteMapping("")
 	ResponseEntity<String> deleteOfOwner(@RequestParam(name = "owner_id", required=true) int ownerId)
 	{
 		boxService.deleteByOwnerId(ownerId);
-		return new ResponseEntity<String>("Box of owner " + ownerId + " deleted", HttpStatus.OK);
+		return ResponseEntity.ok("Box of owner " + ownerId + " deleted");
 	}
 	
 	@PostMapping("/{boxId}/add/{userId}")
 	ResponseEntity<String> addUserToBox(@PathVariable Integer boxId, @PathVariable Integer userId) 
 	{
 		if (boxService.addUserToBox(boxId, userId))
-			return new ResponseEntity<String>("Added user " + userId + " to box " + boxId, HttpStatus.OK);
+			return ResponseEntity.ok("Added user " + userId + " to box " + boxId);
 		return new ResponseEntity<String>("Failed to add user " + userId + " to box " + boxId, HttpStatus.BAD_REQUEST);
 	}
 	
@@ -117,7 +148,7 @@ public class BoxController {
 	ResponseEntity<String> removeUserFromBox(@PathVariable Integer boxId, @PathVariable Integer userId) 
 	{
 		if (boxService.removeUserFromBox(boxId, userId))
-			return new ResponseEntity<String>("Removed user " + userId + " from box " + boxId, HttpStatus.OK);
+			return ResponseEntity.ok("Removed user " + userId + " from box " + boxId);
 		return new ResponseEntity<String>("Failed to remove user " + userId + " from box " + boxId, HttpStatus.BAD_REQUEST);
 	}
 }

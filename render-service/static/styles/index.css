@@ -13,20 +13,24 @@ main {
 }
 
 aside {
+    z-index: 2;
     color: rgb(225 225 225);
     background: rgb(22 25 28);
+}
+
+#app-icon {
+    color: white;
+    background: #6c63ff;
+    height: 67.5px;
+    margin-bottom: 7px;
+    border-color: rgb(40, 46, 53) !important;
+    border-bottom-width: 3px !important;
+    padding: 2px 0 0 0;
 }
 
 .side-menu {
     display: flex;
     flex: 1;
-}
-
-.brand-item {
-    border-color: rgb(53 59 65) !important;
-    border-bottom-width: 3px !important;
-    padding-bottom: 12px !important;
-    margin-bottom: 5px;
 }
 
 .side-item {
@@ -55,6 +59,204 @@ aside {
     font-size: 1.4rem; 
     padding: 5px 0 5px 0; 
     border-color: rgb(225 225 225);
+}
+
+.side-tab {
+    position: fixed;
+    left: -300px;
+    top: 0;
+    width: 315px;
+    height: 100vh;
+    background: rgb(22 25 28);
+    color: white;
+    transition: left 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.lfriend-header {
+    height: 67.5px;
+    background: #6c63ff;
+    color: white;
+    padding: 10px;
+    font-size: 20px;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-color: rgb(40, 46, 53) !important;
+    border-bottom-width: 3px !important;
+    padding-bottom: 12px !important;
+    padding-left: 25px;
+    padding-top: 10px;
+}
+
+.lchat-header {
+    height: 64.5px;
+    background: #6c63ff;
+    color: white;
+    padding: 10px;
+    font-size: 20px;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 25px;
+    padding-top: 10px;
+}
+
+.chat-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    background: rgb(17, 20, 22);
+}
+
+.chat-tab {
+    background: #302e59;
+    color: white;
+    padding: 5px 14px;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: 0.3s ease;
+    flex-shrink: 0;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.chat-tab:hover, .chat-tab.active {
+    background: #504ac2;
+}
+
+#chat-header-user {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.lchat-content, .lfriend-content {
+    flex: 1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lfriend-content {
+    padding: 10px 0;
+}
+
+.lchat-msg-wrapper {
+    flex-grow: 1;
+    overflow-y: scroll;
+}
+
+.lchat-msg-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.lchat-msg-wrapper .msg-ctn {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    padding-top: 5px;
+}
+
+.message {
+    color: rgb(165, 175, 186);
+    margin-bottom: 2px;
+    text-align: end;
+    list-style: none;
+    font-size: 16px;
+    padding: 0 8px;
+    max-width: 95%;
+    word-wrap: break-word;
+    justify-self: flex-end;
+}
+
+.message.user-sent {
+    text-align: start;
+    justify-self: flex-start;
+}
+
+#private-sent-input {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+#friend-list-container {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.friend-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.friend-item.online {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.friend-name {
+    font-size: 16px;
+    color: #fff;
+    flex-grow: 1;
+    align-content: center;
+}
+
+.friend-status {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.online-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background-color: #c14138;
+    align-self: center;
+    margin-right: 8px;
+}
+
+.online .online-status-dot {
+    background-color: #4da550;
+}
+
+.dm-icon-button {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9692d3;
+    font-size: 1.2rem;
+    transition: color 0.3s ease;
+}
+
+.dm-icon-button:hover {
+    color: #8983eb;
+}
+
+.online .dm-icon-button {
+    display: block;
+}
+
+#chat-toggle, #friend-toggle {
+    cursor: pointer;
+}
+
+.side-tab.open {
+    left: 75px;
 }
 
 .player-container {
@@ -92,14 +294,14 @@ aside {
     cursor: default;
 }
 
-#request-control, #request-pause {
+#new-movie {
     height: 38px;
     margin-left: 16px;
     margin-top: 5px;
-
+    background: #6c63ff;
 }
 
-#request-control > div, #request-pause > div {
+#new-movie > div {
     height: 100%;
     font-size: 16px;
     font-weight: bold;
@@ -368,6 +570,7 @@ aside {
     flex: 1;
 }
 
+/* Box tab */
 .tabs {
     background: rgb(7, 9, 14);
     display: inline-flex;
@@ -410,6 +613,25 @@ aside {
     color: rgb(196, 207, 217);
 }
 
+/* Movie search */
+.movie-search {
+    width: 100%;
+    height: 90%;
+    display: flex;
+    flex-direction: column;
+    background: rgb(7, 8, 9);
+}
+
+#movie-query-input {    
+    height: 70px;
+    padding: 0 30px;
+    background: #d3d3d3;
+    outline: none;
+    border: none;
+    font-size: 20px;
+    margin: 30px 40px 0px 40px;
+}
+
 #movie-grid {
     width: 100%;
     height: 100%;
@@ -431,6 +653,7 @@ aside {
     position: relative;
     background-color: rgb(7, 8, 9);
     cursor: pointer;
+    max-height: 420px;
 }
 
 .movie-item:hover {
@@ -459,4 +682,35 @@ aside {
 
 #movie-grid::-webkit-scrollbar {
     display: none;
+}
+
+/* Popup menu */
+#context-menu.d-none {
+    display: none;
+}
+
+#context-menu {
+    display: block;
+    position: absolute;
+    background: #6c63ff;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-radius: 10px;
+    border-top-left-radius: 0;
+    overflow: hidden;
+}
+
+#context-menu li {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+#context-menu li:hover {
+    background-color: rgba(0, 0, 0, 0.1);
 }

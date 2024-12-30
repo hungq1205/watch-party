@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v5"
@@ -17,8 +16,6 @@ import (
 )
 
 const usr_connectionStr = "root:hungthoi@tcp(127.0.0.1:3306)/user_service"
-
-var usr_lock = sync.Mutex{}
 
 type SignUpRequest struct {
 	Username    string `json:"username"`
@@ -36,6 +33,17 @@ type MyCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
+type UserResponse struct {
+	UserId      int    `json:"user_id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	IsOnline    bool   `json:"is_online"`
+}
+
+type UpdateStateRequest struct {
+	IsOnline bool `json:"is_online"`
+}
+
 type UserService struct {
 }
 
@@ -46,10 +54,16 @@ func (s *UserService) Start(prefix string, port int) {
 
 	e.GET(prefix+"/:user_id", s.GetUser)
 	e.GET(prefix+"/:user_id/exists", s.ExistsUser)
+	e.GET(prefix+"/:user_id/friends", s.GetFriends)
 
 	e.POST(prefix+"/signup", s.SignUp)
 	e.POST(prefix+"/login", s.LogIn)
 	e.POST(prefix+"/authenticate", s.Authenticate)
+	e.POST(prefix+"/:sender_id/add/:receiver_id", s.AddFriendRequest)
+
+	e.PUT(prefix+"/:user_id/state", s.UpdateState)
+
+	e.DELETE(prefix+"/:user_id/friends/:friend_id", s.DeleteFriend)
 
 	log.Println("Starting User Service on port ", port, "...")
 	if err := e.Start(fmt.Sprint(":", port)); err != nil {
@@ -57,14 +71,36 @@ func (s *UserService) Start(prefix string, port int) {
 	}
 }
 
-func (s *UserService) ExistsUser(c echo.Context) error {
+func (s *UserService) UpdateState(c echo.Context) error {
 	userId, err := strconv.Atoi(c.Param("user_id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 	}
 
-	usr_lock.Lock()
-	defer usr_lock.Unlock()
+	var payload UpdateStateRequest
+	if err := c.Bind(&payload); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
+	}
+
+	db, err := sql.Open("mysql", usr_connectionStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to connect to the database"})
+	}
+	defer db.Close()
+
+	_, err = db.Exec("UPDATE User SET is_online = ? WHERE id = ?", payload.IsOnline, userId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update user state"})
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+func (s *UserService) ExistsUser(c echo.Context) error {
+	userId, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
+	}
 
 	db, err := sql.Open("mysql", usr_connectionStr)
 	if err != nil {
@@ -82,7 +118,7 @@ func (s *UserService) ExistsUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to query user"})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{"user_id": userId, "exists": true})
+	return c.JSON(http.StatusOK, map[string]interface{}{"id": userId, "exists": true})
 }
 
 func (s *UserService) SignUp(c echo.Context) error {
@@ -94,9 +130,6 @@ func (s *UserService) SignUp(c echo.Context) error {
 	if req.Username == "" || req.Password == "" || req.DisplayName == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "All fields are required"})
 	}
-
-	usr_lock.Lock()
-	defer usr_lock.Unlock()
 
 	db, err := sql.Open("mysql", usr_connectionStr)
 	if err != nil {
@@ -129,7 +162,7 @@ func (s *UserService) SignUp(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
-		"user_id": id,
+		"id": id,
 	})
 }
 
@@ -142,9 +175,6 @@ func (s *UserService) LogIn(c echo.Context) error {
 	if req.Username == "" || req.Password == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Username and password are required"})
 	}
-
-	usr_lock.Lock()
-	defer usr_lock.Unlock()
 
 	db, err := sql.Open("mysql", usr_connectionStr)
 	if err != nil {
@@ -192,9 +222,6 @@ func (s *UserService) Authenticate(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "JWT token is required"})
 	}
 
-	usr_lock.Lock()
-	defer usr_lock.Unlock()
-
 	var claims MyCustomClaims
 	_, err := jwt.ParseWithClaims(req.JwtToken, &claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte("secret"), nil
@@ -211,20 +238,17 @@ func (s *UserService) Authenticate(c echo.Context) error {
 	}
 	defer db.Close()
 
-	row := db.QueryRow("SELECT username FROM User WHERE id = ?", id)
+	row := db.QueryRow("SELECT id, username, display_name, is_online FROM User WHERE id = ?", id)
 
-	var username string
-	if err := row.Scan(&username); err != nil {
+	var user UserResponse
+	if err := row.Scan(&user.UserId, &user.Username, &user.DisplayName, &user.IsOnline); err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": fmt.Sprintf("Unable to find user %v", id)})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": fmt.Sprintf("Unable to find user with ID %d", id)})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user information"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user details"})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"user_id":  id,
-		"username": username,
-	})
+	return c.JSON(http.StatusOK, user)
 }
 
 func (s *UserService) GetUser(c echo.Context) error {
@@ -233,8 +257,30 @@ func (s *UserService) GetUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 	}
 
-	usr_lock.Lock()
-	defer usr_lock.Unlock()
+	db, err := sql.Open("mysql", usr_connectionStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to connect to the database"})
+	}
+	defer db.Close()
+
+	row := db.QueryRow("SELECT id, username, display_name, is_online FROM User WHERE id = ?", userId)
+
+	var user UserResponse
+	if err := row.Scan(&user.UserId, &user.Username, &user.DisplayName, &user.IsOnline); err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": fmt.Sprintf("Unable to find user with ID %d", userId)})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user details"})
+	}
+
+	return c.JSON(http.StatusOK, user)
+}
+
+func (S *UserService) GetFriends(c echo.Context) error {
+	userId, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
+	}
 
 	db, err := sql.Open("mysql", usr_connectionStr)
 	if err != nil {
@@ -242,19 +288,83 @@ func (s *UserService) GetUser(c echo.Context) error {
 	}
 	defer db.Close()
 
-	row := db.QueryRow("SELECT username, display_name FROM User WHERE id = ?", userId)
+	rows, err := db.Query(
+		`SELECT u.id, u.username, u.display_name, u.is_online
+		FROM user_friend uf 
+		JOIN user u on uf.friend_id = u.id
+		WHERE uf.user_id = ?`,
+		userId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to query the database"})
+	}
+	defer rows.Close()
 
-	var username, displayName string
-	if err := row.Scan(&username, &displayName); err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": fmt.Sprintf("Unable to find user with ID %d", userId)})
+	var friends []UserResponse
+	for rows.Next() {
+		var friend UserResponse
+		if err := rows.Scan(&friend.UserId, &friend.Username, &friend.DisplayName, &friend.IsOnline); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to read database row"})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user details"})
+		friends = append(friends, friend)
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"user_id":      userId,
-		"username":     username,
-		"display_name": displayName,
-	})
+	if err := rows.Err(); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error iterating through rows"})
+	}
+
+	if len(friends) == 0 {
+		friends = []UserResponse{}
+	}
+
+	return c.JSON(http.StatusOK, friends)
+}
+
+func (S *UserService) AddFriendRequest(c echo.Context) error {
+	senderId, err := strconv.Atoi(c.Param("sender_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid sender ID"})
+	}
+
+	receiverId, err := strconv.Atoi(c.Param("receiver_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid receiver ID"})
+	}
+
+	db, err := sql.Open("mysql", usr_connectionStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to connect to the database"})
+	}
+	defer db.Close()
+
+	_, err = db.Exec("call make_friend_request(?, ?)", senderId, receiverId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to query the database"})
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+func (S *UserService) DeleteFriend(c echo.Context) error {
+	userId, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
+	}
+
+	friendId, err := strconv.Atoi(c.Param("friend_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid friend ID"})
+	}
+
+	db, err := sql.Open("mysql", usr_connectionStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to connect to the database"})
+	}
+	defer db.Close()
+
+	_, err = db.Exec("DELETE FROM user_friend WHERE (user_id = ? and friend_id = ?) or (user_id = ? and friend_id = ?)", userId, friendId, friendId, userId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to query the database"})
+	}
+
+	return c.NoContent(http.StatusOK)
 }

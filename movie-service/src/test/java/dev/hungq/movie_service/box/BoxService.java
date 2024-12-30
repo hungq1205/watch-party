@@ -69,7 +69,7 @@ public class BoxService {
 	
 	public boolean containsUser(Integer boxId, Integer userId) {
 		var obox = boxRepo.findByUserId(userId);
-		return obox.isPresent() && obox.get().getId() == boxId;
+		return obox.isPresent() && obox.get().getId().intValue() == boxId.intValue();
 	}
 	
 	public Optional<Box> findByOwnerId(Integer ownerId) {

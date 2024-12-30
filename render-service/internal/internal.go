@@ -1,61 +1,111 @@
 package internal
 
 import (
+	"sync"
+
+	"github.com/labstack/echo/v4"
 	"golang.org/x/net/websocket"
 )
 
-var MsgBoxes = make(map[int]*MsgBox)
+var boxesLock = sync.RWMutex{}
+var clientsLock = sync.RWMutex{}
+var Logger echo.Logger
+
+var mvBoxes = make(map[int]*Box)
+var clients = make(map[int]*Client)
 
 type Client struct {
-	UserId   int
-	Username string
-	Conn     *websocket.Conn
-	Box      *MsgBox
+	UserId      int
+	DisplayName string
+	Conn        *websocket.Conn
+	Mu          *sync.Mutex
+	ElapsedSec  int
 }
 
-type MsgBox struct {
-	MvBoxId int
-	Clients []*Client
-	OwnerId int
+type Box struct {
+	Id        int
+	ClientIds []int
+	OwnerId   int
+	Mu        *sync.RWMutex
 }
 
-type ClientData struct {
+type BoxSocketData struct {
 	Datatype     int      `json:"datatype"`
-	Username     string   `json:"username"`
+	SenderID     int      `json:"sender_id"`
+	DisplayName  string   `json:"display_name"`
 	Content      string   `json:"content"`
 	BoxUserNum   int      `json:"box_user_num"`
 	MovieUrl     string   `json:"movie_url"`
+	MovieTitle   string   `json:"movie_title"`
 	Elapsed      float64  `json:"elapsed"`
-	IsPause      bool     `json:"is_pause"`
+	IsPaused     bool     `json:"is_paused"`
 	IsOwner      bool     `json:"is_owner"`
 	BoxId        int      `json:"box_id"`
 	MemUsernames []string `json:"mem_usernames"`
 	MemIds       []int    `json:"mem_ids"`
 }
 
-type ClientBoxData struct {
-	BoxId   int  `json:"box_id"`
-	IsOwner bool `json:"is_owner"`
+type ForwardSocketData struct {
+	Datatype    int    `json:"datatype"`
+	SenderID    int    `json:"sender_id"`
+	ReceiverID  int    `json:"receiver_id"`
+	DisplayName string `json:"display_name"`
+	Content     string `json:"content"`
 }
 
-func (s *MsgBox) Broadcast(fromUserId int, data *ClientData) error {
+type ClientBoxData struct {
+	BoxId       int     `json:"box_id"`
+	MovieId     int     `json:"movie_id"`
+	Elapsed     float64 `json:"elapsed"`
+	UserId      int     `json:"user_id"`
+	DisplayName string  `json:"display_name"`
+	IsOwner     bool    `json:"is_owner"`
+}
+
+func Forward(senderId int, receiverId int, data *ForwardSocketData) error {
+	clientsLock.RLock()
+	defer clientsLock.RUnlock()
+
+	data.SenderID = senderId
+	data.DisplayName = clients[senderId].DisplayName
+
+	if receiver, ok := clients[receiverId]; ok {
+		err := websocket.JSON.Send(receiver.Conn, &data)
+		return err
+	}
+	return nil
+}
+
+func (s *Box) Broadcast(senderId int, data *BoxSocketData) error {
+	if data.Datatype < 0 {
+		return nil
+	}
+	data.SenderID = senderId
+
+	clientsLock.RLock()
+	defer clientsLock.RUnlock()
+
 	if data.Datatype == 2 {
-		for _, client := range s.Clients {
-			data.MemUsernames = append(data.MemUsernames, client.Username)
-			data.MemIds = append(data.MemIds, client.UserId)
+		for _, cid := range s.ClientIds {
+			data.MemUsernames = append(data.MemUsernames, clients[cid].DisplayName)
+			data.MemIds = append(data.MemIds, clients[cid].UserId)
 		}
 	}
 
-	for _, client := range s.Clients {
-		if client.UserId == fromUserId && data.Datatype != 2 {
+	if senderId >= 0 {
+		if c, ok := clients[senderId]; ok {
+			data.DisplayName = c.DisplayName
+		}
+	}
+	for _, cid := range s.ClientIds {
+		if clients[cid].UserId == senderId && data.Datatype != 2 {
 			continue
 		}
-		data.IsOwner = client.UserId == s.OwnerId
-		data.Username = client.Username
-		data.BoxUserNum = len(s.Clients)
-		data.BoxId = s.MvBoxId
+		data.IsOwner = clients[cid].UserId == s.OwnerId
+		data.BoxUserNum = len(s.ClientIds)
+		data.BoxId = s.Id
 
-		err := websocket.JSON.Send(client.Conn, &data)
+		err := websocket.JSON.Send(clients[cid].Conn, &data)
 		if err != nil {
 			return err
 		}
@@ -63,48 +113,150 @@ func (s *MsgBox) Broadcast(fromUserId int, data *ClientData) error {
 	return nil
 }
 
-func (s *MsgBox) AppendNew(userId int, username string, conn *websocket.Conn) {
+func GetClient(userId int) (*Client, bool) {
+	clientsLock.RLock()
+	defer clientsLock.RUnlock()
+	c, ok := clients[userId]
+	return c, ok
+}
+
+func GetBox(boxId int) (*Box, bool) {
+	boxesLock.RLock()
+	defer boxesLock.RUnlock()
+	b, ok := mvBoxes[boxId]
+	return b, ok
+}
+
+func GetBoxOfClient(userId int) *Box {
+	boxesLock.RLock()
+	var tempBoxes []*Box
+	for _, box := range mvBoxes {
+		tempBoxes = append(tempBoxes, box)
+	}
+	boxesLock.RUnlock()
+
+	for _, b := range tempBoxes {
+		b.Mu.RLock()
+		for _, cid := range b.ClientIds {
+			if cid == userId {
+				b.Mu.RUnlock()
+				return b
+			}
+		}
+		b.Mu.RUnlock()
+	}
+	return nil
+}
+
+func Add(userId int, displayName string, conn *websocket.Conn) (*Client, bool) {
+	clientsLock.Lock()
+	if c, ok := clients[userId]; ok {
+		clientsLock.Unlock()
+		c.Mu.Lock()
+		defer c.Mu.Unlock()
+		if c.Conn != nil && c.Conn != conn {
+			c.Conn.Close()
+		}
+		c.Conn = conn
+		return c, false
+	}
+	defer clientsLock.Unlock()
 	client := &Client{
-		UserId:   userId,
-		Username: username,
-		Conn:     conn,
-		Box:      s,
+		UserId:      userId,
+		DisplayName: displayName,
+		Conn:        conn,
+		Mu:          &sync.Mutex{},
+		ElapsedSec:  0,
 	}
+	clients[userId] = client
+	return client, true
+}
 
-	for idx, cli := range s.Clients {
-		if cli.UserId == userId {
-			s.Clients[idx].Conn = conn
+func Remove(userId int) {
+	clientsLock.Lock()
+	delete(clients, userId)
+	clientsLock.Unlock()
+
+	boxesLock.RLock()
+	var tempBoxes []*Box
+	for _, box := range mvBoxes {
+		tempBoxes = append(tempBoxes, box)
+	}
+	boxesLock.RUnlock()
+
+	for _, box := range tempBoxes {
+		box.Remove(userId)
+	}
+}
+
+func AddBox(boxId int, ownerId int) *Box {
+	boxesLock.Lock()
+	defer boxesLock.Unlock()
+
+	mvBoxes[boxId] = &Box{
+		OwnerId: ownerId,
+		Id:      boxId,
+		Mu:      &sync.RWMutex{},
+	}
+	mvBoxes[boxId].ClientIds = make([]int, 0)
+	return mvBoxes[boxId]
+}
+
+func RemoveBox(boxId int) {
+	boxesLock.Lock()
+	defer boxesLock.Unlock()
+	delete(mvBoxes, boxId)
+}
+
+func (s *Box) Add(userId int) {
+	clientsLock.RLock()
+	_, ok := clients[userId]
+	clientsLock.RUnlock()
+
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+
+	for _, cid := range s.ClientIds {
+		if cid == userId {
 			return
 		}
 	}
-
-	s.Clients = append(s.Clients, client)
-}
-
-func AppendNewMsgBox(boxId int, ownerId int, mvBoxId int) {
-	MsgBoxes[boxId] = &MsgBox{OwnerId: ownerId, MvBoxId: mvBoxId}
-	MsgBoxes[boxId].Clients = make([]*Client, 0)
-}
-
-func (s *MsgBox) Close() {
-	for _, client := range s.Clients {
-		client.Conn.Close()
+	if ok {
+		s.ClientIds = append(s.ClientIds, userId)
 	}
 }
 
-func (s *MsgBox) Remove(userId int) {
-	for idx, client := range s.Clients {
-		if client.UserId == userId {
-			client.Conn.Close()
-			s.Clients = append(s.Clients[:idx], s.Clients[idx+1:]...)
+func (s *Box) Remove(userId int) {
+	s.Mu.Lock()
+
+	if s.OwnerId == userId {
+		s.Mu.Unlock()
+		RemoveBox(s.Id)
+		return
+	}
+	defer s.Mu.Unlock()
+
+	for idx, cid := range s.ClientIds {
+		if cid == userId {
+			s.ClientIds = append(s.ClientIds[:idx], s.ClientIds[idx+1:]...)
 			return
 		}
 	}
 }
 
-type AuthReponse struct {
-	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
+func SetClientElapsed(userId int, elapsed int) {
+	if c, ok := GetClient(userId); ok {
+		c.Mu.Lock()
+		defer c.Mu.Unlock()
+		c.ElapsedSec = elapsed
+	}
+}
+
+type UserResponse struct {
+	UserID      int    `json:"user_id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	IsOnline    bool   `json:"is_online"`
 }
 
 type MovieResponse struct {
@@ -118,8 +270,8 @@ type BoxResponse struct {
 	ID       int     `json:"id"`
 	OwnerID  int     `json:"owner_id"`
 	MsgBoxID int     `json:"msg_box_id"`
-	Elapsed  float32 `json:"elapsed"`
-	MovieURL string  `json:"movie_url"`
+	Elapsed  float64 `json:"elapsed"`
+	MovieID  int     `json:"movie_id"`
 	Password string  `json:"password"`
 	UserIDs  []int   `json:"user_ids"`
 }
@@ -128,6 +280,17 @@ type BoxCreateRequest struct {
 	OwnerId  int    `json:"owner_id"`
 	MsgBoxId int    `json:"msg_box_id"`
 	Password string `json:"password"`
+}
+
+type BoxMovieUpdateClientRequest struct {
+	MovieId  int     `json:"movie_id"`
+	Elapsed  float64 `json:"elapsed"`
+	IsPaused bool    `json:"is_paused"`
+}
+
+type BoxMovieUpdateRequest struct {
+	MovieId int     `json:"movie_id"`
+	Elapsed float64 `json:"elapsed"`
 }
 
 type BoxAddUserRequest struct {
@@ -156,4 +319,29 @@ type SignUpRequest struct {
 	Username    string `json:"username"`
 	Password    string `json:"password"`
 	DisplayName string `json:"display_name"`
+}
+
+type MessageResponse struct {
+	ID        int    `json:"id"`
+	UserID    int    `json:"user_id"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+}
+
+type DisplayNameMessageResponse struct {
+	UserId      int    `json:"user_id"`
+	DisplayName string `json:"display_name"`
+	Content     string `json:"content"`
+}
+
+type BoxMessageRequest struct {
+	UserID  int    `json:"user_id"`
+	BoxID   int    `json:"box_id"`
+	Content string `json:"content"`
+}
+
+type DirectMessageRequest struct {
+	SenderID   int    `json:"sender_id"`
+	ReceiverID int    `json:"receiver_id"`
+	Content    string `json:"content"`
 }

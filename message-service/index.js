@@ -34,7 +34,7 @@ app.get(PREFIX + '', async (req, res) => {
         if (box_id == undefined)
         {
             if (user_id == undefined)
-                res.status(400);
+                res.status(400).json({ message: 'Bad request' });
             else
                 msgs = await pool.query('SELECT * FROM message WHERE user_id = $1', [user_id]);
         }
@@ -52,7 +52,31 @@ app.get(PREFIX + '', async (req, res) => {
                 JOIN box_msg bm ON bm.msg_id = m.id
                 WHERE bm.box_id = $1 AND m.user_id = $2`,
                 [box_id, user_id]);
-        res.json(msgs.rows);
+        res.status(200).json(msgs.rows);
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// get direct messages of 2 users
+app.get(PREFIX + '/dm', async (req, res) => {
+    const { user_id1, user_id2 } = req.query;
+    try {
+        if (user_id1 == undefined || user_id2 == undefined)
+            res.status(400);
+        else {
+            boxId = await pool.query(
+                `SELECT m.*
+                FROM message m
+                JOIN box_msg bm ON bm.msg_id = m.id
+                JOIN box b ON b.id = bm.box_id
+                JOIN box_user bu1 ON bu1.box_id = b.id
+                JOIN box_user bu2 ON bu2.box_id = b.id
+                WHERE b.isDM and bu1.user_id = $1 AND bu2.user_id = $2`,
+                [user_id1, user_id2]);
+            res.status(200).json(boxId.rows);
+        }
     } catch (err) {
         console.log(err)
         res.status(500).json({ error: err.message });
@@ -77,18 +101,22 @@ app.get(PREFIX + '/:id', async (req, res) => {
 
 // create message
 app.post(PREFIX, async (req, res) => {
-    const { box_id, user_id, content } = req.body;
+    const { box_id, user_id, content, sender_id, receiver_id } = req.body;
     try {
-        const result = await pool.query(
-            'INSERT INTO message (user_id, content) VALUES ($1, $2) RETURNING *',
-            [user_id, content]
-        );
-        const msg_id = result.rows[0].id
-        await pool.query(
-            'INSERT INTO box_msg (box_id, msg_id) VALUES ($1, $2)',
-            [box_id, msg_id]
-        );
-        res.status(201).json({ message: 'message added successfully!', msg: result.rows[0] });
+        if (user_id == undefined) {
+            await pool.query(
+                'call sent_dm($1, $2, $3)',
+                [sender_id, receiver_id, content]
+            );
+            res.status(201).json({ message: 'Message created' });
+        }
+        else {
+            await pool.query(
+                'call sent_msg_to_box($1, $2, $3)',
+                [user_id, box_id, content]
+            );
+            res.status(201).json({ message: 'Message created' });
+        }
     } catch (err) {
         console.log(err)
         res.status(500).json({ error: err.message });
@@ -105,7 +133,7 @@ app.get(PREFIX + '/box/:id', async (req, res) => {
             JOIN box_user bu ON b.id = bu.box_id  
             WHERE b.id = $1`, 
             [id]);
-        res.json({ box_id: id, user_ids: result.rows });
+        res.status(200).json({ box_id: id, user_ids: result.rows });
     } catch (err) {
         console.log(err)
         res.status(500).json({ error: err.message });

@@ -11,6 +11,70 @@
     <title>Watch Party</title>
 </head>
 <body>
+    <ul id="context-menu" class="d-none">
+        <li id="ctx-delete-friend">Delete Friend</li>
+        <li id="ctx-close-dm">Close</li>
+    </ul>
+    <div id="lfriend-box" class="side-tab">
+        <div class="lfriend-header border-bottom">Friends</div>
+        <div class="lfriend-content" style="padding-top: 5px;">
+            <ul id="friend-list-container">
+                <li class="friend-item online">
+                    <span class="friend-name">Me</span>
+                    <span class="friend-status online-status-dot"></span>
+                    <button class="dm-icon-button" data-user-id="1">
+                        <i class="fa-solid fa-comment icon"></i>
+                    </button>
+                </li>
+                <li class="friend-item">
+                    <span class="friend-name">You</span>
+                    <span class="friend-status online-status-dot"></span>
+                    <button class="dm-icon-button" data-user-id="2">
+                        <i class="fa-solid fa-comment icon"></i>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div id="lchat-box" class="side-tab">
+        <div class="lchat-header">
+            <span id="chat-header-user">Chat</span>
+        </div>
+        <div class="chat-tabs"></div>
+        <div class="lchat-content">
+            <div class="lchat-msg-wrapper">
+                <ul class="msg-ctn"></ul>
+            </div>
+            <input id="private-sent-input" class="d-none" type="text" placeholder="Type your message..." />
+        </div>
+    </div>
+    <aside>
+        <div class="d-flex flex-column flex-shrink-0" style="width:75px; height: 100vh;">
+            <ul class="side-menu nav nav-pills nav-flush flex-shrink-0 flex-column mb-auto text-center">
+                <li class="side-item nav-item border-bottom" id="app-icon">
+                    <div class="p-3 brand-item">
+                        <i class="fa-solid fa-eye"></i>
+                    </div>
+                </li>
+                <li class="side-item nav-item" id="chat-toggle">
+                    <div class="p-3">
+                        <i class="fa-solid fa-comment icon"></i>
+                    </div>
+                </li>
+                <li class="side-item nav-item" id="friend-toggle">
+                    <div class="p-3">
+                        <i class="fa-solid fa-user-group icon" style="font-size: 1.1rem;"></i>
+                    </div>
+                </li>
+                <li class="flex-placeholder"></li>
+            </ul>
+            <div>
+                <div class="border-top text-center mx-auto p-3" style="width:75%;">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+            </div>
+        </div>
+    </aside>
     <main class="form-signin m-auto">
         <form>
             <div class="logo">
@@ -27,7 +91,7 @@
                 <label for="password">Password</label>
             </div>
 
-            <button class="btn btn-primary w-100 py-2" type="submit" id="submit">Join</button>
+            <button class="btn btn-primary w-100 py-2" type="submit" id="submit" style="margin-top: 12px;">Join</button>
             <h3 id="alter-option">Create</h3>
         </form>
       </main>

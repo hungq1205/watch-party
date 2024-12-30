@@ -1,5 +1,8 @@
 package dev.hungq.movie_service.movie;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +18,11 @@ public class MovieService {
 		this.movieRepo = movieRepo;
 	}
 
+	public Page<Movie> searchMoviesByTitlePrefix(String searchString, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return movieRepo.findByTitleLike(searchString + "%", pageable);
+    }
+	
     public List<Movie> findAll() {
         return movieRepo.findAll();
     }
