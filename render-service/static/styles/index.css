@@ -234,7 +234,7 @@ aside {
 }
 
 .dm-icon-button {
-    display: none;
+    display: block;
     background: none;
     border: none;
     cursor: pointer;
@@ -245,10 +245,6 @@ aside {
 
 .dm-icon-button:hover {
     color: #8983eb;
-}
-
-.online .dm-icon-button {
-    display: block;
 }
 
 #chat-toggle, #friend-toggle {

@@ -1,9 +1,9 @@
-let isCreate = false;
-const title = document.getElementById("operation-title");
-const alterOption = document.getElementById("alter-option");
-const boxId = document.getElementById("box-id");
-const submit = document.getElementById("submit");
-const form = document.querySelector("form");
+const pwPopup = document.getElementById("password-popup");
+const pwLabel = document.getElementById("password-label");
+const pwInput = document.getElementById("password-input");
+const overlay = document.getElementById("overlay");
+
+const boxCtn = document.getElementById('box-container');
 
 const contextMenu = document.getElementById('context-menu');
 const deleteFriendContext = document.getElementById('ctx-delete-friend');
@@ -23,7 +23,7 @@ const webAddr = "http://116.96.94.33:3000";
 
 var activeTab = chatTabCtn.querySelector('.chat-tab.active');
 var ws = new WebSocket("ws://116.96.94.33:3000/ws");
-var userId, isDataLoaded = false;
+var userId, isDataLoaded = false, boxJoinId = -1;
 
 ws.onopen = function () {
     setInterval(() => {
@@ -46,10 +46,6 @@ ws.onmessage = function(evt) {
 };
 
 window.onload = function() {
-    alterOption.onclick = function() {
-        isCreate = !isCreate;
-        createForm(isCreate);
-    };
     fetch(webAddr + '/clientBoxData', {
         method: 'GET',
         credentials: 'include',
@@ -64,6 +60,8 @@ window.onload = function() {
             res.json().then(function (data) {
                 userId = data.user_id;
                 isDataLoaded = true;
+                loadBoxes();
+                setInterval(loadBoxes, 4000);
             })
             .catch(err => log(err));
         }
@@ -89,15 +87,12 @@ dmInput.addEventListener('keydown', function(event) {
     }
 });
 
-form.addEventListener("submit", e => {
+pwPopup.addEventListener("submit", e => {
     e.preventDefault();
-    const formData = new FormData(form);
+    const formData = new FormData(pwPopup);
     const data = new URLSearchParams(formData);
 
-    data.set("box_id", data.get("box_id").trim())
-
-    if (isCreate) {
-        data.delete("box_id");
+    if (boxJoinId < 0) {
         fetch(webAddr + '/api/box', {
             method: 'POST',
             credentials: 'include',
@@ -109,10 +104,9 @@ form.addEventListener("submit", e => {
         }).then(function(res) {
             if (res.status == 201 || res.status == 200) 
             {
-                alert("Created");
                 res.json().then(function(jdata) {
-                    data.append("box_id", jdata["id"])
-                    joinBox(data)
+                    data.append("box_id", jdata["id"]);
+                    joinBox(data);
                 });
             }
             else if (res.status == 401)
@@ -124,11 +118,13 @@ form.addEventListener("submit", e => {
                     .then(text => alert(text))
                     .catch(err => alert(err));
         })
-        .catch(err => alert(err))
+        .catch(err => alert(err));
     }
     else {
-        joinBox(data)
+        data.append("box_id", boxJoinId);
+        joinBox(data);
     }
+    closePwPopup();
 });
 
 function joinBox(fdata) {
@@ -159,29 +155,11 @@ function processDirectMessageEvent(data) {
         appendNewDirectMessage(data.content, data.sender_id == userId);
 }
 
-function createForm(isActive)
-{
-    if (isActive)
-    {
-        title.textContent = "Create Box"
-        alterOption.textContent = "Join";
-        boxId.parentElement.classList.add("d-none");
-        submit.textContent = "Create";
-    }
-    else
-    {
-        title.textContent = "Join Box"
-        alterOption.textContent = "Create";
-        boxId.parentElement.classList.remove("d-none");
-        submit.textContent = "Join";
-    }
-}
-
 function activeChatTab(tab) {
     if (activeTab) 
         activeTab.classList.remove('active');
     activeTab = tab;
-    if (activeTab) {
+    if (tab) {
         activeTab.classList.add('active');
         dmInput.classList.remove('d-none');
         loadDirectMessages(activeTab.dataset.userId);
@@ -212,6 +190,19 @@ function sideTabToggle(sideTab) {
             tab.classList.remove('open');
     });
     sideTab.classList.toggle('open');
+}
+
+function openPwPopup(label) {
+    overlay.style.display = 'block';
+    pwPopup.style.display = 'block';
+    pwLabel.innerText = label;
+    pwInput.focus();
+}
+
+function closePwPopup() {
+    overlay.style.display = 'none';
+    pwPopup.style.display = 'none';
+    boxJoinId = -1;
 }
 
 document.addEventListener('click', () => contextMenu.classList.add('d-none'));
@@ -278,6 +269,21 @@ function loadFriends() {
         friends.forEach(friend => appendNewFriend(friend.display_name, friend.is_online, friend.user_id));
     })
     .catch(error => log("Error fetching friends of user #" + userId + ": " + error));
+}
+
+function loadBoxes() {
+    fetch(`${webAddr}/api/box`)
+    .then(res => {
+        if (!res.ok)
+            log(`error: ${res.status}`);
+        return res.json();
+    })
+    .then(boxes => {
+        console.log(boxes);
+        clearBoxList();
+        boxes.forEach(box => appendNewBoxItem(box));
+    })
+    .catch(error => log("Error fetching boxes: " + error));
 }
 
 function closeChatTab(friendId) {
@@ -353,6 +359,10 @@ function clearFriendList() {
     friendList.innerHTML = '';
 }
 
+function clearBoxList() {
+    boxCtn.innerHTML = '';
+}
+
 function appendNewChatTab(displayName, userId) {
     const newTab = document.createElement('div');
     newTab.classList.add('chat-tab');
@@ -422,6 +432,55 @@ function appendNewDirectMessage(content, isUser = false) {
     messageItem.textContent = content;
 
     dmContainer.appendChild(messageItem);
+}
+
+function appendNewBoxItem(data) {
+    const movieBox = document.createElement('div');
+    movieBox.className = 'movie-box';
+    movieBox.dataset.id = data.box_id;
+
+    const img = document.createElement('img');
+    img.src = data.movie_poster_url == "" ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzMP_KMX-JYjb9tSoCTdzSNlC9BKI9rSBM7Q&s" : data.movie_poster_url;
+    img.className = 'poster';
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'info';
+
+    const title = document.createElement('h3');
+    title.className = 'title';
+    title.textContent = data.movie_title;
+
+    const owner = document.createElement('p');
+    owner.className = 'username';
+    owner.textContent = `Owner: ${data.owner_display_name}`;
+
+    const members = document.createElement('p');
+    members.className = 'members';
+    members.innerHTML = `<i class="fas fa-users"></i> ${data.member_num}`;
+
+    const progressBar = document.createElement('div');
+    progressBar.className = 'progress-bar';
+
+    const progress = document.createElement('div');
+    progress.className = 'progress';
+    progress.style.width = `${data.elapsed / 72.0}%`;
+
+    progressBar.appendChild(progress);
+
+    infoDiv.appendChild(title);
+    infoDiv.appendChild(owner);
+    infoDiv.appendChild(members);
+    infoDiv.appendChild(progressBar);
+
+    movieBox.appendChild(img);
+    movieBox.appendChild(infoDiv);
+
+    movieBox.onclick = event => {
+        boxJoinId = movieBox.dataset.id;
+        openPwPopup("Enter password");
+    };
+
+    boxCtn.appendChild(movieBox);
 }
 
 function log(msg) {

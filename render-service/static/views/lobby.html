@@ -11,10 +11,17 @@
     <title>Watch Party</title>
 </head>
 <body>
+    <div id="overlay" class="overlay" onclick="closePwPopup()"></div>
+    <form id="password-popup" class="popup" autocomplete="off">
+        <h2 id="password-label">Password</h2>
+        <input id="password-input" name="password" placeholder="Password" autocomplete="false" autofocus>
+    </form>
+
     <ul id="context-menu" class="d-none">
         <li id="ctx-delete-friend">Delete Friend</li>
         <li id="ctx-close-dm">Close</li>
     </ul>
+    
     <div id="lfriend-box" class="side-tab">
         <div class="lfriend-header border-bottom">Friends</div>
         <div class="lfriend-content" style="padding-top: 5px;">
@@ -75,26 +82,17 @@
             </div>
         </div>
     </aside>
-    <main class="form-signin m-auto">
-        <form>
-            <div class="logo">
-                <i class="fa-solid fa-eye"></i>
-            </div>
-            <h1 class="h3 fw-normal" id="operation-title">Join Box</h1>
-      
-            <div class="form-floating">
-                <input class="form-control" name="box_id" id="box-id" placeholder="Box ID">
-                <label for="username">Box ID</label>
-            </div>
-            <div class="form-floating">
-                <input type="password" name="password" class="form-control" id="password" placeholder="Password">
-                <label for="password">Password</label>
-            </div>
+    <div class="container">
+        <div class="header">
+            <h1>Movie Box</h1>
+            <button class="new-box-button" onclick="openPwPopup('Create password')">
+                <i class="fas fa-plus"></i> New Box
+            </button>
+        </div>
+        <div class="grid" id="box-container">
+        </div>
+    </div>
 
-            <button class="btn btn-primary w-100 py-2" type="submit" id="submit" style="margin-top: 12px;">Join</button>
-            <h3 id="alter-option">Create</h3>
-        </form>
-      </main>
-      <script src="/scripts/lobby.js"></script>
+    <script src="/scripts/lobby.js"></script>
 </body>
 </html>

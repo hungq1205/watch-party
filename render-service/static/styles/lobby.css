@@ -1,84 +1,103 @@
-html, body {
-  height: 100%;
-  background: rgb(43 48 53);
-  display: inline-flex;
-  justify-content: center;
+body {
+    background-color: rgb(25, 29, 33);
+    color: white;
+    margin: 0;
+    padding: 20px;
 }
 
-main {
-    vertical-align: middle;
-    color: rgb(225 225 225);
-    width: 280px;
+.container {
+    max-width: 1200px;
+    margin: auto;
+    margin-top: 20px;
 }
 
-main > form {
-    margin-bottom: 100px;
-}
-
-.logo {
-    text-align: center;
-    font-size: 80px;
-    color: rgb(225 225 225);
-    caret-color: transparent;
-}
-
-#operation-title {
-    text-align: center;
-    font-size: 26px;
-    font-weight: bolder;
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
-    caret-color: transparent;
-    cursor: default;
+    font-weight: 500;
 }
 
-.form-signin {
-  max-width: 330px;
-  padding: 1rem;
-}
-
-.form-signin .form-floating:focus-within {
-  z-index: 2;
-  color: rgb(225 225 225);
-}
-
-.form-control, .form-control:focus {
-    margin-bottom: -1px;
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-    background: #212529;
-    height: 10px;
-}
-
-.form-floating {
-    margin-bottom: 12px;
-}
-
-.form-floating > input,
-.form-floating > input:focus {
-    border-radius: 6px;
-    color: rgb(225 225 225);
-}
-
-.form-floating > label::after { 
-    background-color: transparent !important;
-}
-
-.form-floating > label {
-    color: rgb(225 225 225) !important;
-}
-
-#password::-ms-reveal {
-  filter: invert(100%);
-}
-
-#alter-option {
-    text-align: end;
-    font-size: 15px;
-    margin-top: 10px;
-    margin-right: 12px;
-    font-weight: normal;
+.new-box-button {
+    background-color: #6c63ff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
     cursor: pointer;
-    caret-color: transparent;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.new-box-button i {
+    margin-right: 8px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.movie-box {
+    display: flex;
+    background-color: #343a40;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 0;
+    height: 240px;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+}
+
+.movie-box:hover {
+    box-shadow: 0 0 20px rgba(52, 52, 56, 0.8);
+    transform: scale(1.025);
+}
+
+.poster {
+    width: 180px;
+    height: 100%;
+    object-fit: cover;
+}
+
+.info {
+    padding: 10px;
+    padding-left: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    gap: 0px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    overflow-y: hidden;
+}
+
+.username, .members {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.progress-bar {
+    background-color: #555;
+    border-radius: 5px;
+    height: 10px;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.progress {
+    background-color: #6c63ff;
+    height: 100%;
+    border-radius: 5px;
 }
 
 aside {
@@ -307,7 +326,7 @@ aside {
 }
 
 .dm-icon-button {
-    display: none;
+    display: block;
     background: none;
     border: none;
     cursor: pointer;
@@ -318,10 +337,6 @@ aside {
 
 .dm-icon-button:hover {
     color: #8983eb;
-}
-
-.online .dm-icon-button {
-    display: block;
 }
 
 #chat-toggle, #friend-toggle {
@@ -361,4 +376,40 @@ aside {
 
 #context-menu li:hover {
     background-color: rgba(0, 0, 0, 0.1);
+}
+
+#overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 4;
+}
+
+.popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    background-color: rgb(22, 25, 28);
+    justify-items: center;
+    color: white;
+    padding: 25px 30px;
+    border-radius: 8px;
+    z-index: 5;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.popup input {
+    padding: 10px;
+    padding-left: 20px;
+}
+
+.popup h2 {
+    margin: 0 0 15px;
+    font-size: 1.5rem;
 }

@@ -345,3 +345,14 @@ type DirectMessageRequest struct {
 	ReceiverID int    `json:"receiver_id"`
 	Content    string `json:"content"`
 }
+
+type BoxPreviewResponse struct {
+	BoxID            int     `json:"box_id"`
+	OwnerID          int     `json:"owner_id"`
+	OwnerDisplayName string  `json:"owner_display_name"`
+	Elapsed          float64 `json:"elapsed"`
+	MovieID          int     `json:"movie_id"`
+	MovieTitle       string  `json:"movie_title"`
+	MoviePosterUrl   string  `json:"movie_poster_url"`
+	NumberOfMember   int     `json:"member_num"`
+}

@@ -55,6 +55,7 @@ func (s *RenderService) Start(port int) {
 	e.GET("/api/user/:user_id/friends", GetFriends)
 	e.GET("/api/movie/search", SearchMovies)
 	e.GET("/api/movie/:movie_id", GetMovie)
+	e.GET("/api/box", GetBoxPreviews)
 	e.GET("/api/box/:box_id/exists/:user_id", ContainsUser)
 	e.GET("/api/box/:box_id/msg", GetBoxMessages)
 	e.GET("/api/user/:sender_id/msg/:receiver_id", GetDirectMessages)
@@ -261,7 +262,12 @@ func TrackSocket(userId int) {
 		time.Sleep(time.Duration(11) * time.Second)
 		client, ok := internal.GetClient(userId)
 		if !ok {
-			continue
+			if err := CloseSocket(userId); err != nil {
+				internal.Logger.Printf(err.Error())
+				return
+			}
+			internal.Logger.Printf("User #%d went offline", userId)
+			return
 		}
 
 		client.Mu.Lock()
@@ -290,11 +296,58 @@ func CloseSocket(userId int) error {
 		client.Mu.Lock()
 		client.Conn.Close()
 		client.Mu.Unlock()
-		if err := RawUpdateUserState(userId, false); err != nil {
-			return fmt.Errorf("failed to update user state for user %d: \n%v", userId, err)
-		}
+		internal.Remove(userId)
+	}
+	if err := RawUpdateUserState(userId, false); err != nil {
+		return fmt.Errorf("failed to update user state for user %d: \n%v", userId, err)
 	}
 	return nil
+}
+
+func GetBoxPreviews(c echo.Context) error {
+	url := fmt.Sprintf("%s/api/box", movieServiceAddr)
+	resp, err := http.Get(url)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return c.String(resp.StatusCode, "Failed to get boxes")
+	}
+
+	var bRes []internal.BoxResponse
+	if err := json.NewDecoder(resp.Body).Decode(&bRes); err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to parse boxes")
+	}
+
+	output := make([]internal.BoxPreviewResponse, 0)
+	for _, box := range bRes {
+		bp := internal.BoxPreviewResponse{}
+		bp.MovieTitle = "Movie not selected"
+		bp.MovieID = -1
+		if box.MovieID >= 0 {
+			movie, err := RawGetMovie(box.MovieID)
+			if err != nil {
+				return c.String(http.StatusInternalServerError, err.Error())
+			}
+			bp.MovieID = movie.ID
+			bp.MoviePosterUrl = movie.PosterURL
+			bp.MovieTitle = movie.Title
+		}
+		owner, err := RawGetUser(box.OwnerID)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+		bp.OwnerID = owner.UserID
+		bp.OwnerDisplayName = owner.DisplayName
+
+		bp.BoxID = box.ID
+		bp.Elapsed = box.Elapsed
+		bp.NumberOfMember = len(box.UserIDs)
+		output = append(output, bp)
+	}
+
+	return c.JSON(http.StatusOK, output)
 }
 
 func UpdateMovieOfBox(c echo.Context) error {

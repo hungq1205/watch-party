@@ -320,7 +320,7 @@ function activeChatTab(tab) {
     if (activeTab) 
         activeTab.classList.remove('active');
     activeTab = tab;
-    if (activeTab) {
+    if (tab) {
         activeTab.classList.add('active');
         dmInput.classList.remove('d-none');
         loadDirectMessages(activeTab.dataset.userId);

@@ -33,7 +33,6 @@ form.addEventListener("submit", e => {
         }).then((function(res) {
             if (res.status == 201 || res.status == 200 || res.status == 401) 
             {
-                alert("Signed up");
                 window.location.replace('http://' + webAddr + ':3000/login?nocache=' + new Date().getTime());
             }
             else
@@ -54,7 +53,6 @@ form.addEventListener("submit", e => {
             body: data
         }).then(function(res) {
             if (res.status == 200) {
-                alert("Logged in");
                 window.location.replace('http://' + webAddr + ':3000/lobby');
             }
             else {
